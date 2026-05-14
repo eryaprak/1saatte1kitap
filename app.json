@@ -2,7 +2,7 @@
   "expo": {
     "name": "1 Saatte 1 Kitap",
     "slug": "1saatte1kitap",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -61,6 +61,7 @@
       "bundler": "metro"
     },
     "extra": {
+      "privacyPolicyUrl": "https://voxduru.com/privacy/1saatte1kitap",
       "eas": {
         "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
       }
