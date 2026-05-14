@@ -24,6 +24,8 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const setSubscriptionTier = useAuthStore((s) => s.setSubscriptionTier);
+  const initAnonymousSession = useAuthStore((s) => s.initAnonymousSession);
+  const startAuthListener = useAuthStore((s) => s.startAuthListener);
   const [adsReady, setAdsReady] = useState(false);
 
   // Initialise AdMob once on mount
@@ -33,6 +35,13 @@ export default function RootLayout() {
       .then(() => setAdsReady(true))
       .catch(() => setAdsReady(true)); // still show banner slot on error
   }, []);
+
+  // Initialise Supabase auth (anonymous sign-in + session listener)
+  useEffect(() => {
+    void initAnonymousSession();
+    const unsubscribeAuth = startAuthListener();
+    return unsubscribeAuth;
+  }, [initAnonymousSession, startAuthListener]);
 
   // Initialise RevenueCat and sync subscription tier
   useEffect(() => {
@@ -63,6 +72,14 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="player"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="admin"
             options={{
               headerShown: false,
               presentation: 'modal',

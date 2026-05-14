@@ -9,7 +9,7 @@ import {
   PanResponder,
   GestureResponderEvent,
 } from 'react-native';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { usePlayerStore } from '../stores/playerStore';
 import {
@@ -32,6 +32,32 @@ export default function PlayerScreen() {
   const playbackRate = usePlayerStore((s) => s.playbackRate);
 
   const sliderWidthRef = useRef<number>(0);
+  const loadProgress = usePlayerStore((s) => s.loadProgress);
+  const startProgressTimer = usePlayerStore((s) => s.startProgressTimer);
+  const stopProgressTimer = usePlayerStore((s) => s.stopProgressTimer);
+  const saveProgress = usePlayerStore((s) => s.saveProgress);
+
+  // Load saved progress and start timer when a book is loaded
+  useEffect(() => {
+    if (!currentBook) return;
+
+    // Load saved position and seek to it
+    loadProgress(currentBook.id).then((saved) => {
+      if (saved > 0) {
+        seekTo(saved);
+      }
+    });
+
+    // Start periodic save
+    startProgressTimer();
+
+    // On unmount: save final position and stop timer
+    return () => {
+      void saveProgress();
+      stopProgressTimer();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBook?.id]);
 
   if (!currentBook) {
     return (

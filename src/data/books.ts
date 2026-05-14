@@ -1,4 +1,16 @@
 import type { Book } from '../types';
+import {
+  fetchChannelVideos,
+  getBestThumbnailUrl,
+  iso8601DurationToMinutes,
+} from '../services/youtubeApi';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const CHANNEL_ID = 'UCsOLEIWRR81IfPuxBE0FTvw'; // @birsaattebirkitap
+const MAX_RESULTS = 50;
+
+// ─── Mock Books (fallback / seed data) ───────────────────────────────────────
 
 export const MOCK_BOOKS: Book[] = [
   {
@@ -114,3 +126,99 @@ export const MOCK_BOOKS: Book[] = [
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
   },
 ];
+
+// ─── YouTube → Book Converter ─────────────────────────────────────────────────
+
+/**
+ * Converts a YouTube video into a Book object.
+ * audioUrl is left as a placeholder — Step 5 will populate it from the backend.
+ */
+function videoToBook(video: {
+  id: string;
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: Parameters<typeof getBestThumbnailUrl>[0];
+    publishedAt: string;
+  };
+  contentDetails: { duration: string };
+}): Book {
+  const summary =
+    video.snippet.description.length > 200
+      ? video.snippet.description.slice(0, 197) + '...'
+      : video.snippet.description || 'YouTube kanalından otomatik eklendi.';
+
+  return {
+    id: `yt_${video.id}`,
+    title: video.snippet.title,
+    author: '@birsaattebirkitap',
+    coverUrl: getBestThumbnailUrl(video.snippet.thumbnails),
+    summary,
+    category: 'YouTube',
+    durationMinutes: iso8601DurationToMinutes(video.contentDetails.duration),
+    youtubeVideoId: video.id,
+    isPremium: false,
+    createdAt: video.snippet.publishedAt,
+    audioUrl: '', // placeholder — Step 5
+  };
+}
+
+// ─── In-Memory Cache ──────────────────────────────────────────────────────────
+
+let _cachedBooks: Book[] | null = null;
+let _lastFetchedAt: number | null = null;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function isCacheValid(): boolean {
+  if (_cachedBooks === null || _lastFetchedAt === null) return false;
+  return Date.now() - _lastFetchedAt < CACHE_TTL_MS;
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Fetches books from the YouTube channel and converts them to Book objects.
+ * Throws on network/API errors so callers can handle fallback.
+ */
+export async function fetchBooksFromYouTube(): Promise<Book[]> {
+  const videos = await fetchChannelVideos(CHANNEL_ID, MAX_RESULTS);
+  return videos.map(videoToBook);
+}
+
+/**
+ * Returns the full book list (mock + YouTube), using cache if valid.
+ * On failure, returns mock books as fallback.
+ */
+export async function getBooks(): Promise<Book[]> {
+  if (isCacheValid()) {
+    return _cachedBooks!;
+  }
+
+  try {
+    const ytBooks = await fetchBooksFromYouTube();
+    const all = [...MOCK_BOOKS, ...ytBooks];
+    _cachedBooks = all;
+    _lastFetchedAt = Date.now();
+    return all;
+  } catch (err) {
+    console.warn('[Books] YouTube fetch failed, using mock data:', err);
+    _cachedBooks = MOCK_BOOKS;
+    _lastFetchedAt = Date.now();
+    return MOCK_BOOKS;
+  }
+}
+
+/**
+ * Force-refreshes the book list, bypassing the cache.
+ */
+export async function refreshBooks(): Promise<Book[]> {
+  _cachedBooks = null;
+  _lastFetchedAt = null;
+  return getBooks();
+}
+
+/**
+ * The full combined list (mock + YouTube), exposed as a named export
+ * for any component that needs a synchronous seed before async data loads.
+ */
+export const ALL_BOOKS: Book[] = MOCK_BOOKS;

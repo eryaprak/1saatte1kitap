@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   View,
   Text,
@@ -8,27 +7,32 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
-import { MOCK_BOOKS } from '../../data/books';
 import { useAuthStore } from '../../stores/authStore';
 import { loadAndPlay } from '../../services/audio';
 import { showInterstitialSequence } from '../../services/ads';
 import { formatMinutes } from '../../utils/formatters';
+import { useBookSync } from '../../hooks/useBookSync';
 import type { Book } from '../../types';
+import { useState } from 'react';
 
-const CATEGORIES = ['Tümü', 'Klasik', 'Destan', 'Tiyatro'];
+const CATEGORIES = ['Tümü', 'Klasik', 'Destan', 'Tiyatro', 'YouTube'];
 
 export default function HomeScreen() {
   const subscriptionTier = useAuthStore((s) => s.subscriptionTier);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tümü');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { books, isLoading, refresh } = useBookSync();
 
   const isFree = subscriptionTier === 'free';
 
   const filteredBooks =
     selectedCategory === 'Tümü'
-      ? MOCK_BOOKS
-      : MOCK_BOOKS.filter((b) => b.category === selectedCategory);
+      ? books
+      : books.filter((b) => b.category === selectedCategory);
 
   async function handleListen(book: Book) {
     if (loadingId) return;
@@ -36,7 +40,6 @@ export default function HomeScreen() {
     setLoadingId(book.id);
     try {
       if (isFree) {
-        // Show interstitial ad(s) before playing for free users
         await showInterstitialSequence(1);
       }
       await loadAndPlay(book);
@@ -48,8 +51,28 @@ export default function HomeScreen() {
     }
   }
 
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          tintColor="#2563EB"
+          colors={['#2563EB']}
+        />
+      }
+    >
       {/* Hero */}
       <View style={styles.hero}>
         <Text style={styles.heroTitle}>Kitapları Keşfet</Text>
@@ -90,17 +113,26 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* Book List */}
-      <Text style={styles.sectionTitle}>{filteredBooks.length} Kitap</Text>
-      <View style={styles.bookList}>
-        {filteredBooks.map((book) => (
-          <BookCard
-            key={book.id}
-            book={book}
-            isLoading={loadingId === book.id}
-            onListen={() => handleListen(book)}
-          />
-        ))}
-      </View>
+      {isLoading && !isRefreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Kitaplar yükleniyor...</Text>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.sectionTitle}>{filteredBooks.length} Kitap</Text>
+          <View style={styles.bookList}>
+            {filteredBooks.map((book) => (
+              <BookCard
+                key={book.id}
+                book={book}
+                isLoading={loadingId === book.id}
+                onListen={() => handleListen(book)}
+              />
+            ))}
+          </View>
+        </>
+      )}
 
       <View style={styles.bottomSpacing} />
     </ScrollView>
@@ -114,6 +146,8 @@ interface BookCardProps {
 }
 
 function BookCard({ book, isLoading, onListen }: BookCardProps) {
+  const isYouTube = Boolean(book.youtubeVideoId);
+
   return (
     <View style={styles.card}>
       <Image
@@ -126,6 +160,15 @@ function BookCard({ book, isLoading, onListen }: BookCardProps) {
           <View style={styles.categoryPill}>
             <Text style={styles.categoryPillText}>{book.category}</Text>
           </View>
+          {isYouTube ? (
+            <View style={styles.youtubePill}>
+              <Text style={styles.youtubePillText}>YouTube</Text>
+            </View>
+          ) : (
+            <View style={styles.audioPill}>
+              <Text style={styles.audioPillText}>Sesli Kitap</Text>
+            </View>
+          )}
           {book.isPremium && (
             <View style={styles.premiumPill}>
               <Text style={styles.premiumPillText}>Premium</Text>
@@ -138,7 +181,9 @@ function BookCard({ book, isLoading, onListen }: BookCardProps) {
         <Text style={styles.cardAuthor} numberOfLines={1}>
           {book.author}
         </Text>
-        <Text style={styles.cardDuration}>{formatMinutes(book.durationMinutes)}</Text>
+        {book.durationMinutes > 0 && (
+          <Text style={styles.cardDuration}>{formatMinutes(book.durationMinutes)}</Text>
+        )}
         <Text style={styles.cardSummary} numberOfLines={2}>
           {book.summary}
         </Text>
@@ -223,6 +268,15 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontWeight: '600',
   },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -270,6 +324,28 @@ const styles = StyleSheet.create({
   categoryPillText: {
     fontSize: 11,
     color: '#1D4ED8',
+    fontWeight: '600',
+  },
+  youtubePill: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  youtubePillText: {
+    fontSize: 11,
+    color: '#B91C1C',
+    fontWeight: '600',
+  },
+  audioPill: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  audioPillText: {
+    fontSize: 11,
+    color: '#065F46',
     fontWeight: '600',
   },
   premiumPill: {
