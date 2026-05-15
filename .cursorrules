@@ -1,0 +1,28 @@
+# 1 Saatte 1 Kitap - Expo Audio Book App
+## Stack
+- Expo SDK, Expo Router (file-based routing), TypeScript
+- Zustand (state management), @tanstack/react-query
+- Supabase (backend/auth), RevenueCat (IAP)
+- expo-av (audio playback), expo-notifications
+- react-native-google-mobile-ads (AdMob)
+- react-native-reanimated (animations)
+
+## Architecture
+- /app — routes (tabs, modals, stacks)
+- /src/stores — Zustand stores (playerStore, authStore)
+- /src/services — API calls, Supabase client, RevenueCat
+- /src/components — reusable UI components
+- /src/data — static book data, categories
+- /src/types — TypeScript interfaces
+
+## Rules
+- Functional components only, no class components
+- Zustand stores: minimal state, derived values via selectors
+- Audio: always cleanup sound instances on unmount/switch
+- Navigation: use expo-router Link/useRouter, never react-navigation directly
+- Styles: StyleSheet.create at bottom of file, no inline objects
+- Platform-specific: use Platform.select or .ios.tsx/.android.tsx
+- No any types — strict TypeScript
+- Imports: absolute from src/ (configured in tsconfig)
+- Test with: `npx expo-doctor`, `tsc --noEmit`
+- IAP: always verify receipt server-side before granting access

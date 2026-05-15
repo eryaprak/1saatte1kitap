@@ -3,8 +3,6 @@ import { View, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import MobileAds from 'react-native-google-mobile-ads';
-import AppBannerAd from '../components/BannerAd';
 import {
   configurePurchases,
   fetchCustomerInfo,
@@ -26,15 +24,6 @@ export default function RootLayout() {
   const setSubscriptionTier = useAuthStore((s) => s.setSubscriptionTier);
   const initAnonymousSession = useAuthStore((s) => s.initAnonymousSession);
   const startAuthListener = useAuthStore((s) => s.startAuthListener);
-  const [adsReady, setAdsReady] = useState(false);
-
-  // Initialise AdMob once on mount
-  useEffect(() => {
-    MobileAds()
-      .initialize()
-      .then(() => setAdsReady(true))
-      .catch(() => setAdsReady(true)); // still show banner slot on error
-  }, []);
 
   // Initialise Supabase auth (anonymous sign-in + session listener)
   useEffect(() => {
@@ -87,8 +76,6 @@ export default function RootLayout() {
             }}
           />
         </Stack>
-        {/* One banner shown for everyone on app open – stays mounted */}
-        {adsReady && <AppBannerAd />}
       </View>
     </QueryClientProvider>
   );

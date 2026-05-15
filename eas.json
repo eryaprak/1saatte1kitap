@@ -33,9 +33,12 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "info@voxduru.com",
+        "appleId": "eryaprak@gmail.com",
         "ascAppId": "6769437056",
-        "appleTeamId": "WCVY2XHTVR"
+        "appleTeamId": "Y3YV42G7V8",
+        "ascApiKeyPath": "/Users/berkeryaprak/.appstoreconnect/private_keys/AuthKey_P3X76F73BW.p8",
+        "ascApiKeyIssuerId": "7338b935-1bc4-4357-adb3-9fcfe10c9438",
+        "ascApiKeyId": "P3X76F73BW"
       },
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",

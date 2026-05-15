@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { loadAndPlay } from '../../services/audio';
-import { showInterstitialSequence } from '../../services/ads';
+import { showInterstitial } from '../../services/ads';
 import { formatMinutes } from '../../utils/formatters';
 import { useBookSync } from '../../hooks/useBookSync';
 import type { Book } from '../../types';
@@ -40,7 +40,7 @@ export default function HomeScreen() {
     setLoadingId(book.id);
     try {
       if (isFree) {
-        await showInterstitialSequence(1);
+        await showInterstitial();
       }
       await loadAndPlay(book);
     } catch (err) {
